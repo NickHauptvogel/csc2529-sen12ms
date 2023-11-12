@@ -44,7 +44,7 @@ def load_s1(path, imgTransform):
     
 
 # util function for reading data from single sample
-def load_sample(sample, labels, label_type, threshold, imgTransform, use_s1, use_s2, use_RGB, IGBP_s):
+def load_sample(sample, labels, label_type, threshold, imgTransform, use_s1, use_s2, use_RGB, IGBP_s, crop_size):
 
     # load s2 data
     if use_s2:
@@ -77,8 +77,12 @@ def load_sample(sample, labels, label_type, threshold, imgTransform, use_s1, use
         loc = np.argmax(lc, axis=-1)
         lc_hot = np.zeros_like(lc).astype(np.float32)
         lc_hot[loc] = 1
-             
-    rt_sample = {'image': img, 'label': lc_hot, 'id': sample["id"]}
+
+    # Crop image to given crop size
+    y = np.maximum(0, 256 - crop_size) // 2
+    x = np.maximum(0, 256 - crop_size) // 2
+    img = img[..., y:y + crop_size, x:x + crop_size]
+    rt_sample = {'image': img, 'label': lc_hot, 'label_cls': loc, 'id': sample["id"]}
     
     if imgTransform is not None:
         rt_sample = imgTransform(rt_sample)
@@ -115,7 +119,7 @@ class SEN12MS(data.Dataset):
 
     def __init__(self, path, ls_dir=None, imgTransform=None, 
                  label_type="multi_label", threshold=0.1, subset="train",
-                 use_s2=False, use_s1=False, use_RGB=False, IGBP_s=True):
+                 use_s2=False, use_s1=False, use_RGB=False, IGBP_s=True, exper_suffix="", crop_size=256):
         """Initialize the dataset"""
 
         # inizialize
@@ -123,6 +127,8 @@ class SEN12MS(data.Dataset):
         self.imgTransform = imgTransform
         self.threshold = threshold
         self.label_type = label_type
+        self.exper_suffix = exper_suffix
+        self.crop_size = crop_size
 
         # make sure input parameters are okay
         if not (use_s2 or use_s1 or use_RGB):
@@ -257,13 +263,16 @@ class SEN12MS(data.Dataset):
             
             for s2_id in sample_list:
                 mini_name = s2_id.split("_")
-                s2_loc = os.path.join(path, (mini_name[0]+'_'+mini_name[1]),
+                # Append the path of the s2 generated images to the path
+                s2_loc = os.path.join(path, (mini_name[0]+'_'+mini_name[1]+'_'+mini_name[2] + self.exper_suffix),
                                       (mini_name[2]+'_'+mini_name[3]), s2_id)
-                s1_loc = s2_loc.replace("_s2_", "_s1_").replace("s2_", "s1_")
+                s1_loc = os.path.join(path, (mini_name[0] + '_' + mini_name[1] + '_s1'),
+                                      ('s1_' + mini_name[3]), s2_id.replace("_s2_", "_s1_"))
                 
                 pbar.update()
-                self.samples.append({"s1": s1_loc, "s2": s2_loc, 
-                                     "id": s2_id})
+                if os.path.exists(s2_loc):
+                    self.samples.append({"s1": s1_loc, "s2": s2_loc,
+                                         "id": s2_id})
        
             pbar.close()
 #----------------------------------------------------------------------               
@@ -289,7 +298,7 @@ class SEN12MS(data.Dataset):
         sample = self.samples[index]
         labels = self.labels
         return load_sample(sample, labels, self.label_type, self.threshold, self.imgTransform, 
-                           self.use_s1, self.use_s2, self.use_RGB, self.IGBP_s)
+                           self.use_s1, self.use_s2, self.use_RGB, self.IGBP_s, self.crop_size)
 
     def __len__(self):
         """Get number of samples in the dataset"""
@@ -317,7 +326,7 @@ class Normalize(object):
 
     def __call__(self, rt_sample):
 
-        img, label, sample_id = rt_sample['image'], rt_sample['label'], rt_sample['id']
+        img, label, sample_id, label_cls = rt_sample['image'], rt_sample['label'], rt_sample['id'], rt_sample['label_cls']
 
         # different input channels
         if img.size()[0] == 12:
@@ -338,7 +347,7 @@ class Normalize(object):
             for t, m, s in zip(img, self.bands_s1_mean, self.bands_s1_std):
                 t.sub_(m).div_(s)            
         
-        return {'image':img, 'label':label, 'id':sample_id}
+        return {'image':img, 'label':label, 'id':sample_id, 'label_cls':label_cls}
 
 
 class ToTensor(object):
@@ -346,9 +355,9 @@ class ToTensor(object):
 
     def __call__(self, rt_sample):
         
-        img, label, sample_id = rt_sample['image'], rt_sample['label'], rt_sample['id']
+        img, label, sample_id, label_cls = rt_sample['image'], rt_sample['label'], rt_sample['id'], rt_sample['label_cls']
         
-        rt_sample = {'image': torch.tensor(img), 'label':label, 'id':sample_id}
+        rt_sample = {'image': torch.tensor(img), 'label':label, 'id':sample_id, 'label_cls':label_cls}
         return rt_sample
 
 

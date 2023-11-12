@@ -52,7 +52,7 @@ args = parser.parse_args()
 
 
 # -------------------------------- Main Program ------------------------------
-def main():
+def main(exper_suffix=""):
     global args
 
 # -------------------------- load config from file
@@ -105,7 +105,9 @@ def main():
                            imgTransform = imgTransform,
                            label_type=cf_label_type, threshold=cf_threshold, subset="test", 
                            use_s1=boo_use_s1, use_s2=boo_use_s2, use_RGB=boo_use_RGB,
-                           IGBP_s=boo_IGBP_simple)
+                           IGBP_s=boo_IGBP_simple,
+                           exper_suffix=exper_suffix,
+                           crop_size=128)
     
     # number of input channels
     n_inputs = test_dataGen.n_inputs
@@ -164,7 +166,10 @@ def main():
         model = model.cuda()
         
     # import model weights
-    checkpoint = torch.load(args.checkpoint_pth)
+    if use_cuda:
+        checkpoint = torch.load(args.checkpoint_pth)
+    else:
+        checkpoint = torch.load(args.checkpoint_pth, map_location=torch.device('cpu'))
     model.load_state_dict(checkpoint['model_state_dict'])
     print("=> loaded checkpoint '{}' (epoch {})".format(args.checkpoint_pth, checkpoint['epoch']))
 
@@ -184,10 +189,12 @@ def main():
     rank_loss_ = Ranking_loss()
     labelAvgPrec_score_ = LabelAvgPrec_score()
     
-    calssification_report_ = calssification_report(ORG_LABELS) 
+    calssification_report_ = calssification_report(ORG_LABELS)
     
 # -------------------------------- prediction
     y_true = []
+    y_true_cls = []
+    id_pred_true_logits = {}
     predicted_probs = []
     
     with torch.no_grad():
@@ -196,6 +203,8 @@ def main():
             # unpack sample
             bands = data["image"]
             labels = data["label"]
+            label_class = data["label_cls"].cpu().numpy()
+            id = data["id"]
     
             # move data to gpu if model is on gpu
             if use_cuda:
@@ -214,8 +223,10 @@ def main():
                   
             labels = labels.cpu().numpy() # keep true & pred label at same loc.
             predicted_probs += list(probs)
-            y_true += list(labels) 
-                  
+            y_true += list(labels)
+            y_true_cls += list(label_class)
+            logits = logits.cpu().numpy()
+            id_pred_true_logits.update({id[i]: [np.argmax(probs[i]), label_class[i], logits[i]] for i in range(len(id))})
             
     predicted_probs = np.asarray(predicted_probs)
     # convert predicted probabilities into one/multi-hot labels 
@@ -223,11 +234,13 @@ def main():
         y_predicted = (predicted_probs >= 0.5).astype(np.float32)
     else:
         loc = np.argmax(predicted_probs, axis=-1)
+        y_predicted_cls = loc
         y_predicted = np.zeros_like(predicted_probs).astype(np.float32)
         for i in range(len(loc)):
             y_predicted[i,loc[i]] = 1
             
-    y_true = np.asarray(y_true)  
+    y_true = np.asarray(y_true)
+    y_true_cls = np.asarray(y_true_cls)
     
 # --------------------------- evaluation with metrics  
     # general
@@ -310,7 +323,11 @@ def main():
             "labelAvgPrec" : labelAvgPrec,
             "clsReport": cls_report,
             "conf_mat": conf_mat,
-            "AverageAcc": aa }
+            "AverageAcc": aa,
+            "y_predicted_cls": y_predicted_cls,
+            "y_true_cls": y_true_cls,
+            "id_pred_true_logits": id_pred_true_logits
+        }
 
     print("saving metrics...")
     pkl.dump(info, open("test_scores.pkl", "wb"))
@@ -318,4 +335,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    scores = pkl.load(open("test_scores.pkl", "rb"))
+    pass
+    experiment = ""
+    main(exper_suffix=experiment)
