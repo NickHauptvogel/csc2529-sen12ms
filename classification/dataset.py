@@ -253,8 +253,11 @@ class SEN12MS(data.Dataset):
                 file =os.path.join(ls_dir, 'test_list.pkl')
                 sample_list = pkl.load(open(file, "rb"))
                 
-            # remove broken file
+            # remove broken files
             broken_file = 'ROIs1868_summer_s2_146_p202.tif'
+            if broken_file in sample_list:
+                sample_list.remove(broken_file)
+            broken_file = 'ROIs1868_summer_s2_31_p684.tif'
             if broken_file in sample_list:
                 sample_list.remove(broken_file)
             
