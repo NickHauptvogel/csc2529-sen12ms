@@ -269,7 +269,7 @@ class SEN12MS(data.Dataset):
                 # Append the path of the s2 generated images to the path
                 s2_loc = os.path.join(path, (mini_name[0]+'_'+mini_name[1]+'_'+mini_name[2] + self.exper_suffix),
                                       (mini_name[2]+ self.exper_suffix+'_'+mini_name[3]),
-                                      (mini_name[0] + '_' + mini_name[1] + '_' + mini_name[2] + self.exper_suffix + '_' + mini_name[3] + '.tif'))
+                                      (mini_name[0] + '_' + mini_name[1] + '_' + mini_name[2] + self.exper_suffix + '_' + mini_name[3] + '_' + mini_name[4]))
                 print(s2_loc)
                 s1_loc = os.path.join(path, (mini_name[0] + '_' + mini_name[1] + '_s1'),
                                       ('s1_' + mini_name[3]), s2_id.replace("_s2_", "_s1_"))
