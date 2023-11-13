@@ -48,11 +48,13 @@ parser.add_argument('--batch_size', type=int, default=64,
 parser.add_argument('--num_workers',type=int, default=4,
                     help='num_workers for data loading in pytorch')
 
+parser.add_argument('--experiment_suffix', type=str, default='')
+
 args = parser.parse_args()
 
 
 # -------------------------------- Main Program ------------------------------
-def main(exper_suffix=""):
+def main():
     global args
 
 # -------------------------- load config from file
@@ -106,7 +108,7 @@ def main(exper_suffix=""):
                            label_type=cf_label_type, threshold=cf_threshold, subset="test", 
                            use_s1=boo_use_s1, use_s2=boo_use_s2, use_RGB=boo_use_RGB,
                            IGBP_s=boo_IGBP_simple,
-                           exper_suffix=exper_suffix,
+                           exper_suffix=args.experiment_suffix,
                            crop_size=128)
     
     # number of input channels
@@ -335,7 +337,4 @@ def main(exper_suffix=""):
 
 
 if __name__ == "__main__":
-    scores = pkl.load(open("test_scores.pkl", "rb"))
-    pass
-    experiment = ""
-    main(exper_suffix=experiment)
+    main()
