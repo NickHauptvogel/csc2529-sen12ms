@@ -49,6 +49,7 @@ parser.add_argument('--num_workers',type=int, default=4,
                     help='num_workers for data loading in pytorch')
 
 parser.add_argument('--experiment_suffix', type=str, default='')
+parser.add_argument('--s2_separate_folder', type=str, default='')
 
 args = parser.parse_args()
 

@@ -119,7 +119,7 @@ class SEN12MS(data.Dataset):
 
     def __init__(self, path, ls_dir=None, imgTransform=None, 
                  label_type="multi_label", threshold=0.1, subset="train",
-                 use_s2=False, use_s1=False, use_RGB=False, IGBP_s=True, exper_suffix="", crop_size=256):
+                 use_s2=False, use_s1=False, use_RGB=False, IGBP_s=True, exper_suffix="", crop_size=256, s2_separate_folder=""):
         """Initialize the dataset"""
 
         # inizialize
@@ -267,7 +267,11 @@ class SEN12MS(data.Dataset):
             for s2_id in sample_list:
                 mini_name = s2_id.split("_")
                 # Append the path of the s2 generated images to the path
-                s2_loc = os.path.join(path, (mini_name[0]+'_'+mini_name[1]+'_'+mini_name[2] + self.exper_suffix),
+                if s2_separate_folder != "":
+                    s2_path = s2_separate_folder
+                else:
+                    s2_path = path
+                s2_loc = os.path.join(s2_path, (mini_name[0]+'_'+mini_name[1]+'_'+mini_name[2] + self.exper_suffix),
                                       (mini_name[2]+ self.exper_suffix+'_'+mini_name[3]),
                                       (mini_name[0] + '_' + mini_name[1] + '_' + mini_name[2] + self.exper_suffix + '_' + mini_name[3] + '_' + mini_name[4]))
                 s1_loc = os.path.join(path, (mini_name[0] + '_' + mini_name[1] + '_s1'),
