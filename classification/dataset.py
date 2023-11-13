@@ -257,7 +257,7 @@ class SEN12MS(data.Dataset):
             broken_file = 'ROIs1868_summer_s2_146_p202.tif'
             if broken_file in sample_list:
                 sample_list.remove(broken_file)
-            broken_file = 'ROIs1868_summer_s2_31_p684.tif'
+            broken_file = 'ROIs1158_spring_s2_31_p684.tif'
             if broken_file in sample_list:
                 sample_list.remove(broken_file)
             
