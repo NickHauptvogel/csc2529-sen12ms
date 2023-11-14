@@ -6,9 +6,9 @@ from utils.dataset_utils import *
 from sklearn.metrics import precision_recall_curve, auc, normalized_mutual_info_score
 
 if __name__ == '__main__':
-    cloudfree = pkl.load(open('test_scores_cloudfree.pkl', 'rb'))
-    cloudy = pkl.load(open('test_scores_cloudy.pkl', 'rb'))
-    cloudremoved_glfcr = pkl.load(open('test_scores_removed_glf-cr.pkl', 'rb'))
+    cloudfree = pkl.load(open('pretrained_test_scores_cloudfree.pkl', 'rb'))
+    cloudy = pkl.load(open('pretrained_test_scores_cloudy.pkl', 'rb'))
+    cloudremoved_glfcr = pkl.load(open('pretrained_test_scores_removed_glf-cr.pkl', 'rb'))
     def plot_conf_mat(data, title):
         # Plot confusion matrix in matplotlib
         fig, ax = plt.subplots(figsize=(7, 7))
