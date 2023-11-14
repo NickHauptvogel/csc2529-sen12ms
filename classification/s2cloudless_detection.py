@@ -1,5 +1,5 @@
 from s2cloudless import S2PixelCloudDetector
-from classification.dataset import SEN12MS, ToTensor, Normalize
+from dataset import SEN12MS, ToTensor, Normalize
 import torchvision.transforms as transforms
 import numpy as np
 
@@ -17,7 +17,7 @@ if __name__ == '__main__':
     # load test dataset
     imgTransform = transforms.Compose([ToTensor(), Normalize(bands_mean, bands_std)])
 
-    test_dataGen = SEN12MS("/content/drive/MyDrive/CSC2529/data", "../splits",
+    test_dataGen = SEN12MS("/content/drive/MyDrive/CSC2529/data", "/content/drive/MyDrive/CSC2529/csc2529-sen12ms/splits",
                            imgTransform=imgTransform,
                            label_type="single_label", subset="test",
                            use_s1=False, use_s2=True, use_RGB=False,
