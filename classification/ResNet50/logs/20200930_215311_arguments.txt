@@ -1,0 +1,16 @@
+exp_name: major_ResNet50_s2
+data_dir: /work/share/sen12ms
+label_split_dir: /home/ge73vap/labels_splits
+use_s2: True
+use_s1: False
+use_RGB: False
+IGBP_simple: True
+label_type: single_label
+threshold: 0.1
+model: ResNet50
+lr: 0.001
+decay: 1e-05
+batch_size: 64
+num_workers: 4
+epochs: 100
+resume: None
