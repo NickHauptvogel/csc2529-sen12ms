@@ -110,7 +110,7 @@ def main():
                            use_s1=boo_use_s1, use_s2=boo_use_s2, use_RGB=boo_use_RGB,
                            IGBP_s=boo_IGBP_simple,
                            exper_suffix=args.experiment_suffix,
-                           crop_size=128,
+                           crop_size=224,
                            s2_separate_folder=args.s2_separate_folder)
     
     # number of input channels

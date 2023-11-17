@@ -146,13 +146,13 @@ def main():
                             imgTransform=imgTransform, 
                             label_type=label_type, threshold=args.threshold, subset="train", 
                             use_s1=args.use_s1, use_s2=args.use_s2, use_RGB=args.use_RGB,
-                            IGBP_s=args.IGBP_simple, crop_size=128)
+                            IGBP_s=args.IGBP_simple, crop_size=224)
     
     val_dataGen = SEN12MS(args.data_dir, args.label_split_dir, 
                           imgTransform=imgTransform, 
                           label_type=label_type, threshold=args.threshold, subset="val", 
                           use_s1=args.use_s1, use_s2=args.use_s2, use_RGB=args.use_RGB,
-                          IGBP_s=args.IGBP_simple, crop_size=128)
+                          IGBP_s=args.IGBP_simple, crop_size=224)
     
     
     # number of input channels

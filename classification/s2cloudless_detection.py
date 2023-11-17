@@ -23,7 +23,7 @@ if __name__ == '__main__':
                            use_s1=False, use_s2=True, use_RGB=False,
                            IGBP_s=True,
                            exper_suffix="_cloudy",
-                           crop_size=128)
+                           crop_size=224)
 
     detector = S2PixelCloudDetector()
 

@@ -15,6 +15,14 @@ import torchvision.transforms as transforms
 S2_BANDS_LD = [2, 3, 4, 5, 6, 7, 8, 9, 12, 13]
 S2_BANDS_RGB = [2, 3, 4] # B(2),G(3),R(4)
 
+bands_mean = {'s1_mean': [-11.76858, -18.294598],
+              's2_mean': [1226.4215, 1137.3799, 1139.6792, 1350.9973, 1932.9058,
+                          2211.1584, 2154.9846, 2409.1128, 2001.8622, 1356.0801]}
+
+bands_std = {'s1_std': [4.525339, 4.3586307],
+             's2_std': [741.6254, 740.883, 960.1045, 946.76056, 985.52747,
+                        1082.4341, 1057.7628, 1136.1942, 1132.7898, 991.48016]}
+
 
 # util function for reading s2 data
 def load_s2(path, imgTransform, s2_band): 
@@ -307,6 +315,18 @@ class SEN12MS(data.Dataset):
         labels = self.labels
         return load_sample(sample, labels, self.label_type, self.threshold, self.imgTransform, 
                            self.use_s1, self.use_s2, self.use_RGB, self.IGBP_s, self.crop_size)
+
+    def load_by_img_name(self, name):
+        """Get a single example from the dataset"""
+
+        # get and load sample from index file
+        sample = [
+            index
+            for index in range(len(self.samples))
+            if self.samples[index]["id"] == name
+        ]
+        assert len(sample) == 1
+        return self[sample[0]]
 
     def __len__(self):
         """Get number of samples in the dataset"""
