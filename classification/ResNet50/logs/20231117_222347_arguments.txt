@@ -1,0 +1,16 @@
+exp_name: None
+data_dir: /content/drive/MyDrive/CSC2529/data
+label_split_dir: /content/drive/MyDrive/CSC2529/csc2529-sen12ms/splits
+use_s2: True
+use_s1: False
+use_RGB: False
+IGBP_simple: True
+label_type: single_label
+threshold: 0.1
+model: ResNet50
+lr: 0.001
+decay: 1e-05
+batch_size: 64
+num_workers: 16
+epochs: 100
+resume: None
