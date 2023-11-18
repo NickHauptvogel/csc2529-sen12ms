@@ -328,6 +328,21 @@ class SEN12MS(data.Dataset):
         assert len(sample) == 1
         return self[sample[0]]
 
+    def get_class_counts(self):
+        """Get the number of samples per class"""
+        class_counts = np.zeros(17)
+        for sample in self.samples:
+            class_id = np.argmax(self.labels[sample["id"]])
+            class_counts[class_id] += 1
+
+        cls1 = sum(class_counts[0:5])
+        cls2 = sum(class_counts[5:7])
+        cls3 = sum(class_counts[7:9])
+        cls6 = class_counts[11] + class_counts[13]
+        class_counts = np.asarray([cls1, cls2, cls3, class_counts[9], class_counts[10], cls6, class_counts[12], class_counts[14], class_counts[15], class_counts[16]])
+
+        return class_counts
+
     def __len__(self):
         """Get number of samples in the dataset"""
         return len(self.samples)

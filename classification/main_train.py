@@ -147,13 +147,13 @@ def main():
                             label_type=label_type, threshold=args.threshold, subset="train", 
                             use_s1=args.use_s1, use_s2=args.use_s2, use_RGB=args.use_RGB,
                             IGBP_s=args.IGBP_simple, crop_size=224)
-    
+
     val_dataGen = SEN12MS(args.data_dir, args.label_split_dir, 
                           imgTransform=imgTransform, 
                           label_type=label_type, threshold=args.threshold, subset="val", 
                           use_s1=args.use_s1, use_s2=args.use_s2, use_RGB=args.use_RGB,
                           IGBP_s=args.IGBP_simple, crop_size=224)
-    
+
     
     # number of input channels
     n_inputs = train_dataGen.n_inputs 
@@ -258,10 +258,10 @@ def main():
         print('-' * 10)
 
         train(train_data_loader, model, optimizer, lossfunc, label_type, epoch, use_cuda, train_writer)
-        micro_f1 = val(val_data_loader, model, optimizer, label_type, epoch, use_cuda, val_writer)
+        macro_f1 = val(val_data_loader, model, optimizer, label_type, epoch, use_cuda, val_writer)
 
-        is_best_acc = micro_f1 > best_acc
-        best_acc = max(best_acc, micro_f1)
+        is_best_acc = macro_f1 > best_acc
+        best_acc = max(best_acc, macro_f1)
 
         save_checkpoint({
             'epoch': epoch,
@@ -421,14 +421,15 @@ def val(valloader, model, optimizer, label_type, epoch, use_cuda, val_writer):
     for tag, value in info.items():
         val_writer.add_scalar(tag, value, epoch)
 
-    print('Validation microPrec: {:.6f} microF1: {:.6f} sampleF1: {:.6f} microF2: {:.6f} sampleF2: {:.6f}'.format(
+    print('Validation macroF1: {:.6f} microPrec: {:.6f} microF1: {:.6f} sampleF1: {:.6f} microF2: {:.6f} sampleF2: {:.6f}'.format(
+            macro_f1,
             micro_prec,
             micro_f1,
             sample_f1,
             micro_f2,
             sample_f2
             ))
-    return micro_f1
+    return macro_f1
 
 
 if __name__ == "__main__":

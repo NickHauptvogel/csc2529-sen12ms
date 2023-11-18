@@ -1,7 +1,10 @@
+import json
 import pickle as pkl
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+
+from classification.dataset import SEN12MS
 from utils.dataset_utils import *
 from sklearn.metrics import precision_recall_curve, auc, normalized_mutual_info_score, f1_score, \
     precision_score, recall_score
@@ -33,6 +36,7 @@ def plot_conf_mat(data, title):
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
     plt.tight_layout()
+    plt.savefig(f"{title}.pdf")
     plt.show()
 
 
@@ -46,6 +50,9 @@ def create_all_info_dataframe():
         cloud_cover = f.readlines()
     with open("glf-cr_scores.txt") as f:
         glf_cr_scores = f.readlines()
+    with open("uncrtaints_scores.json") as f:
+        uncrtaints_scores = json.load(f)
+
     cloud_cover_dict = {}
     for line in cloud_cover:
         line = line.replace('\n', '').split('\t')
@@ -54,6 +61,9 @@ def create_all_info_dataframe():
     for line in glf_cr_scores:
         line = line.replace('\n', '').split('\t')
         glf_cr_score_dict[line[0]] = {'psnr': float(line[1]), 'ssim': float(line[2])}
+    uncrtaints_scores_dict = {}
+    for entry in uncrtaints_scores:
+        uncrtaints_scores_dict[entry['file_name']] = entry
 
     test_images = cloudfree['id_pred_true_logits'].keys()
     test_images = sorted(test_images)
@@ -70,6 +80,8 @@ def create_all_info_dataframe():
         probs_glf_cr = np.exp(logits_glf_cr) / (np.sum(np.exp(logits_glf_cr)) + 1e-15)
         image_info_dict = {'image': i,
                            'cloud_cover': cloud_cover_dict[i],
+                           'uncrtaints_psnr': uncrtaints_scores_dict[filename_wo_s2]['PSNR'],
+                           'uncrtaints_ssim': uncrtaints_scores_dict[filename_wo_s2]['SSIM'],
                            'glf-cr_psnr': glf_cr_score_dict[filename_wo_s2]['psnr'],
                            'glf-cr_ssim': glf_cr_score_dict[filename_wo_s2]['ssim'],
                            'true': cloudfree['id_pred_true_logits'][i][1],
@@ -96,6 +108,39 @@ def create_all_info_dataframe():
 
 if __name__ == '__main__':
 
+    if not os.path.exists('val_counts.pkl'):
+
+        data_dir = '/mnt/g/Meine Ablage/CSC2529/data'
+        label_split_dir = '../splits'
+        label_type = 'single_label'
+        threshold = 0.5
+        use_s1 = False
+        use_s2 = False
+        use_RGB = True
+        IGBP_s = True
+
+        val_dataGen = SEN12MS(data_dir, label_split_dir,
+                              imgTransform=None,
+                              label_type=label_type, threshold=threshold, subset="val",
+                              use_s1=use_s1, use_s2=use_s2, use_RGB=use_RGB,
+                              IGBP_s=IGBP_s, crop_size=224)
+
+        val_counts = val_dataGen.get_class_counts()
+
+        train_dataGen = SEN12MS(data_dir, label_split_dir,
+                                imgTransform=None,
+                                label_type=label_type, threshold=threshold, subset="train",
+                                use_s1=use_s1, use_s2=use_s2, use_RGB=use_RGB,
+                                IGBP_s=IGBP_s, crop_size=224)
+
+        train_counts = train_dataGen.get_class_counts()
+
+        pkl.dump(val_counts, open('val_counts.pkl', 'wb'))
+        pkl.dump(train_counts, open('train_counts.pkl', 'wb'))
+
+    val_counts = pkl.load(open('val_counts.pkl', 'rb'))
+    train_counts = pkl.load(open('train_counts.pkl', 'rb'))
+
     if not os.path.exists('test_set_all_info.pkl'):
         create_all_info_dataframe()
     df = pkl.load(open('test_set_all_info.pkl', 'rb'))
@@ -115,7 +160,34 @@ if __name__ == '__main__':
         rotation=45, ha='right')
     ax.set_xlabel('Cloud cover')
     ax.set_ylabel('Number of images')
+    plt.tight_layout()
+    plt.savefig('cloud_cover_hist.pdf')
     plt.show()
+
+    # Bar plot of true labels
+    fig, ax = plt.subplots()
+    test_counts = df['true'].value_counts().sort_index()
+    # Fill in missing labels
+    test_counts = np.array([0 if i not in test_counts.index else test_counts[i] for i in np.arange(0, 10, 1)])
+    # Normalize
+    test_counts = test_counts / np.sum(test_counts)
+    train_counts = train_counts / np.sum(train_counts)
+    val_counts = val_counts / np.sum(val_counts)
+    # Plot all three
+    ax.bar(np.arange(0, 10, 1) - 0.2, train_counts, width=0.2, label='Train')
+    ax.bar(np.arange(0, 10, 1), val_counts, width=0.2, label='Val')
+    ax.bar(np.arange(0, 10, 1) + 0.2, test_counts, width=0.2, label='Test')
+    ax.set_xticks([i for i in np.arange(0, 10, 1)])
+    ax.set_xticklabels(
+        IGBPSimpleClassList, rotation=45, ha='right')
+    ax.set_xlabel('True label')
+    ax.set_ylabel('Percentage of images')
+    plt.tight_layout()
+    plt.legend()
+    plt.savefig('true_label_hist.pdf')
+    plt.show()
+
+    1/0
 
     # Compute metrics grouped by cloud cover
     df['cloud_cover_bin'] = pd.cut(df['cloud_cover'], bins=[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
@@ -123,18 +195,18 @@ if __name__ == '__main__':
     # Group by cloud cover bin
     df_grouped = df.groupby('cloud_cover_bin')
     # Get counts
-    counts = df_grouped.apply(lambda x: len(x))
+    test_counts = df_grouped.apply(lambda x: len(x))
     # Compute scores for each group
-    f1_glf_cr = df_grouped.apply(lambda x: f1_score(x['true'], x['pred-glf-cr'], average='weighted'))
-    f1_cloudy = df_grouped.apply(lambda x: f1_score(x['true'], x['pred-cloudy'], average='weighted'))
-    f1_cloudfree = df_grouped.apply(lambda x: f1_score(x['true'], x['pred-cloudfree'], average='weighted'))
-    precision_glf_cr = df_grouped.apply(lambda x: precision_score(x['true'], x['pred-glf-cr'], average='weighted'))
-    precision_cloudy = df_grouped.apply(lambda x: precision_score(x['true'], x['pred-cloudy'], average='weighted'))
+    f1_glf_cr = df_grouped.apply(lambda x: f1_score(x['true'], x['pred-glf-cr'], average='macro'))
+    f1_cloudy = df_grouped.apply(lambda x: f1_score(x['true'], x['pred-cloudy'], average='macro'))
+    f1_cloudfree = df_grouped.apply(lambda x: f1_score(x['true'], x['pred-cloudfree'], average='macro'))
+    precision_glf_cr = df_grouped.apply(lambda x: precision_score(x['true'], x['pred-glf-cr'], average='macro'))
+    precision_cloudy = df_grouped.apply(lambda x: precision_score(x['true'], x['pred-cloudy'], average='macro'))
     precision_cloudfree = df_grouped.apply(
-        lambda x: precision_score(x['true'], x['pred-cloudfree'], average='weighted'))
-    recall_glf_cr = df_grouped.apply(lambda x: recall_score(x['true'], x['pred-glf-cr'], average='weighted'))
-    recall_cloudy = df_grouped.apply(lambda x: recall_score(x['true'], x['pred-cloudy'], average='weighted'))
-    recall_cloudfree = df_grouped.apply(lambda x: recall_score(x['true'], x['pred-cloudfree'], average='weighted'))
+        lambda x: precision_score(x['true'], x['pred-cloudfree'], average='macro'))
+    recall_glf_cr = df_grouped.apply(lambda x: recall_score(x['true'], x['pred-glf-cr'], average='macro'))
+    recall_cloudy = df_grouped.apply(lambda x: recall_score(x['true'], x['pred-cloudy'], average='macro'))
+    recall_cloudfree = df_grouped.apply(lambda x: recall_score(x['true'], x['pred-cloudfree'], average='macro'))
     avg_prob_glf_cr = df_grouped.apply(lambda x: np.mean(x['max_prob_glf-cr']))
     avg_prob_cloudy = df_grouped.apply(lambda x: np.mean(x['max_prob_cloudy']))
     avg_prob_cloudfree = df_grouped.apply(lambda x: np.mean(x['max_prob_cloudfree']))
@@ -158,21 +230,21 @@ if __name__ == '__main__':
         plt.show()
 
 
-    plot_bar_metrics(f1_cloudfree, f1_glf_cr, f1_cloudy, counts, 'F1 score')
-    plot_bar_metrics(precision_cloudfree, precision_glf_cr, precision_cloudy, counts, 'Precision')
-    plot_bar_metrics(recall_cloudfree, recall_glf_cr, recall_cloudy, counts, 'Recall')
-    plot_bar_metrics(avg_prob_cloudfree, avg_prob_glf_cr, avg_prob_cloudy, counts, 'Average probability')
+    plot_bar_metrics(f1_cloudfree, f1_glf_cr, f1_cloudy, test_counts, 'F1 score')
+    plot_bar_metrics(precision_cloudfree, precision_glf_cr, precision_cloudy, test_counts, 'Precision')
+    plot_bar_metrics(recall_cloudfree, recall_glf_cr, recall_cloudy, test_counts, 'Recall')
+    plot_bar_metrics(avg_prob_cloudfree, avg_prob_glf_cr, avg_prob_cloudy, test_counts, 'Average probability')
 
     # Compute metrics grouped by SSIM
     df['ssim_bin'] = pd.cut(df['glf-cr_ssim'], bins=[0.7, 0.8, 0.9, 1], labels=False)
     # Group by SSIM bin
     df_grouped = df.groupby('ssim_bin')
     # Counts for each group
-    counts = df_grouped.apply(lambda x: len(x))
+    test_counts = df_grouped.apply(lambda x: len(x))
     # Compute scores for each group
-    f1_glf_cr_ssim = df_grouped.apply(lambda x: f1_score(x['true'], x['pred-glf-cr'], average='weighted'))
-    precision_glf_cr_ssim = df_grouped.apply(lambda x: precision_score(x['true'], x['pred-glf-cr'], average='weighted'))
-    recall_glf_cr_ssim = df_grouped.apply(lambda x: recall_score(x['true'], x['pred-glf-cr'], average='weighted'))
+    f1_glf_cr_ssim = df_grouped.apply(lambda x: f1_score(x['true'], x['pred-glf-cr'], average='macro'))
+    precision_glf_cr_ssim = df_grouped.apply(lambda x: precision_score(x['true'], x['pred-glf-cr'], average='macro'))
+    recall_glf_cr_ssim = df_grouped.apply(lambda x: recall_score(x['true'], x['pred-glf-cr'], average='macro'))
     avg_prob_glf_cr_ssim = df_grouped.apply(lambda x: np.mean(x['max_prob_glf-cr']))
 
 
@@ -189,10 +261,10 @@ if __name__ == '__main__':
         plt.show()
 
 
-    plot_bar_metrics_ssim(f1_glf_cr_ssim, counts, 'F1 score')
-    plot_bar_metrics_ssim(precision_glf_cr_ssim, counts, 'Precision')
-    plot_bar_metrics_ssim(recall_glf_cr_ssim, counts, 'Recall')
-    plot_bar_metrics_ssim(avg_prob_glf_cr_ssim, counts, 'Average probability')
+    plot_bar_metrics_ssim(f1_glf_cr_ssim, test_counts, 'F1 score')
+    plot_bar_metrics_ssim(precision_glf_cr_ssim, test_counts, 'Precision')
+    plot_bar_metrics_ssim(recall_glf_cr_ssim, test_counts, 'Recall')
+    plot_bar_metrics_ssim(avg_prob_glf_cr_ssim, test_counts, 'Average probability')
 
     df['logits_sum_cloudfree'] = df['logits-cloudfree'].apply(lambda x: np.sum(x))
     df['logits_sum_cloudy'] = df['logits-cloudy'].apply(lambda x: np.sum(x))
