@@ -22,7 +22,7 @@ def fc_init_weights(m):
 
 
 class DenseNet121(nn.Module):
-    def __init__(self, n_inputs = 12, numCls = 17):
+    def __init__(self, n_inputs = 12, numCls = 17, crop_size = 224):
         super().__init__()
 
 #        densenet = models.densenet121(pretrained=False, memory_efficient=True)
@@ -33,7 +33,7 @@ class DenseNet121(nn.Module):
                 *densenet.features[1:])
         
         # classifier
-        self.classifier = nn.Linear(65536, numCls, bias=True)
+        self.classifier = nn.Linear(crop_size**2, numCls, bias=True)
 
         self.apply(weights_init_kaiming)
         self.apply(fc_init_weights)
@@ -49,7 +49,7 @@ class DenseNet121(nn.Module):
     
     
 class DenseNet161(nn.Module):
-    def __init__(self, n_inputs = 12, numCls = 17):
+    def __init__(self, n_inputs = 12, numCls = 17, crop_size = 224):
         super().__init__()
 
         densenet = models.densenet161(pretrained=False)
@@ -77,7 +77,7 @@ class DenseNet161(nn.Module):
     
     
 class DenseNet169(nn.Module):
-    def __init__(self, n_inputs = 12, numCls = 17):
+    def __init__(self, n_inputs = 12, numCls = 17, crop_size = 224):
         super().__init__()
 
         densenet = models.densenet169(pretrained=False)
@@ -103,7 +103,7 @@ class DenseNet169(nn.Module):
     
     
 class DenseNet201(nn.Module):
-    def __init__(self, n_inputs = 12, numCls = 17):
+    def __init__(self, n_inputs = 12, numCls = 17, crop_size = 224):
         super().__init__()
 
         densenet = models.densenet201(pretrained=False)
@@ -156,4 +156,3 @@ if __name__ == "__main__":
  
 
 
-  

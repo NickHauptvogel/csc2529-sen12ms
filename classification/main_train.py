@@ -141,18 +141,19 @@ def main():
     
     # load datasets 
     imgTransform = transforms.Compose([ToTensor(),Normalize(bands_mean, bands_std)])
-    
+
+    crop_size = 224
     train_dataGen = SEN12MS(args.data_dir, args.label_split_dir, 
                             imgTransform=imgTransform, 
                             label_type=label_type, threshold=args.threshold, subset="train", 
                             use_s1=args.use_s1, use_s2=args.use_s2, use_RGB=args.use_RGB,
-                            IGBP_s=args.IGBP_simple, crop_size=224)
+                            IGBP_s=args.IGBP_simple, crop_size=crop_size)
 
     val_dataGen = SEN12MS(args.data_dir, args.label_split_dir, 
                           imgTransform=imgTransform, 
                           label_type=label_type, threshold=args.threshold, subset="val", 
                           use_s1=args.use_s1, use_s2=args.use_s2, use_RGB=args.use_RGB,
-                          IGBP_s=args.IGBP_simple, crop_size=224)
+                          IGBP_s=args.IGBP_simple, crop_size=crop_size)
 
     
     # number of input channels
@@ -200,13 +201,13 @@ def main():
         model = ResNet152(n_inputs, numCls)
         
     elif args.model == 'DenseNet121':
-        model = DenseNet121(n_inputs, numCls)
+        model = DenseNet121(n_inputs, numCls, crop_size=crop_size)
     elif args.model == 'DenseNet161':
-        model = DenseNet161(n_inputs, numCls)
+        model = DenseNet161(n_inputs, numCls, crop_size=crop_size)
     elif args.model == 'DenseNet169':
-        model = DenseNet169(n_inputs, numCls)
+        model = DenseNet169(n_inputs, numCls, crop_size=crop_size)
     elif args.model == 'DenseNet201':
-        model = DenseNet201(n_inputs, numCls)     
+        model = DenseNet201(n_inputs, numCls, crop_size=crop_size)
     else:
         raise NameError("no model")
 
