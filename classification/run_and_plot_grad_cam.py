@@ -7,17 +7,14 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path().resolve()))
 import argparse
-import numpy as np
 import pickle as pkl
 from os.path import join
-import os
 import matplotlib.pyplot as plt
 from captum.attr import LayerGradCam, LayerAttribution
 
 import torch
 import torchvision.transforms as transforms
 
-from grad_cam_violin_plots import plot_violin_plots
 from get_gradcam_heatmap import show_cam_on_image
 from models.VGG import VGG16, VGG19
 from models.ResNet import ResNet50, ResNet101, ResNet152
@@ -114,13 +111,6 @@ def run_grad_cam(
     num_eval = num_eval if num_eval > -1 else num_images
     num_print = min(num_eval, num_print)
     batch_size = min(num_eval, 16)
-
-    rgb_mean = np.reshape(
-        np.array([bands_mean["s2_mean"][2], bands_mean["s2_mean"][1], bands_mean["s2_mean"][0]]), [1, 1, 1, -1]
-    )
-    rgb_std = np.reshape(
-        np.array([bands_std["s2_std"][2], bands_std["s2_std"][1], bands_std["s2_std"][0]]), [1, 1, 1, -1]
-    )
 
     # load test dataset
     img_transform = transforms.Compose([ToTensor(), Normalize(bands_mean, bands_std)])
@@ -289,7 +279,7 @@ def run_grad_cam(
             stop=end_this_batch,
         )
 
-        pred_cloud_removed = [res_dict[test_images[idx]]["pred-glf-cr"] for idx in ids]
+        pred_cloud_removed = [res_dict[test_images[idx]]["pred-cloudremoved"] for idx in ids]
         pred_clear = [res_dict[test_images[idx]]["pred-cloudfree"] for idx in ids]
         groundtruth = [res_dict[test_images[idx]]["true"] for idx in ids]
         coverage_list = [int(res_dict[test_images[idx]]["cloud_cover"]*100) for idx in ids]
@@ -311,13 +301,17 @@ def run_grad_cam(
             if samples_counter > num_eval:
                 break
 
-            n = (
-                f"cloud_removed_false_{int(res_dict[test_images[idx]]['cloud_cover']*100)}_{idx}_{res_dict[test_images[idx]]['true']}"
-                + f"_{res_dict[test_images[idx]]['pred-cloudfree']}"
-                + f"_{res_dict[test_images[idx]]['pred-glf-cr']}"
-            )
+            # At least one of the predictions must be correct to be printed
+            if (res_dict[test_images[idx]]['true'] == res_dict[test_images[idx]]['pred-cloudfree'] or
+                res_dict[test_images[idx]]['true'] == res_dict[test_images[idx]]['pred-cloudremoved']) and \
+                samples_counter <= num_print:
 
-            if samples_counter <= num_print:
+                n = (
+                    f"{idx}_{res_dict[test_images[idx]]['true']}"
+                    + f"_{res_dict[test_images[idx]]['pred-cloudfree']}"
+                    + f"_{res_dict[test_images[idx]]['pred-cloudremoved']}"
+                    + f"_{int(res_dict[test_images[idx]]['cloud_cover']*100)}"
+                )
 
                 plt.clf()
                 plt.bar(
@@ -328,9 +322,9 @@ def run_grad_cam(
                 )
                 plt.bar(
                     np.arange(10) + 0.2,
-                    res_dict[test_images[idx]]['probs_glf-cr'],
+                    res_dict[test_images[idx]]['probs_cloudremoved'],
                     width=0.4,
-                    label="GLF-CR",
+                    label="Cloud-removed",
                 )
                 plt.setp(
                     plt.gca().get_xticklabels(),
@@ -349,55 +343,42 @@ def run_grad_cam(
                 test_data_gen_clear.load_by_img_name(res_dict[test_images[idx]]['image'])
             )
 
-            rgb_img_clear.append(
-                np.clip(
-                    np.transpose(
-                        sample_clear[-1]["image"][1:4, :, :].numpy(), axes=[1, 2, 0]
-                    )
-                    * rgb_std
-                    + rgb_mean,
-                    a_min=0,
-                    a_max=10000,
-                )
-                / 10000
-            )  #  # normalize
+            img = sample_clear[-1]["image"][:3, :, :].numpy()
+            img = np.transpose(img, axes=[1, 2, 0])
+            img = np.stack([img[:,:,2], img[:,:,1], img[:,:,0]], axis=2)
+            # Rescale to 0-1
+            img = (img - np.min(img)) / (np.max(img) - np.min(img))
+            # Add fake batch dimension
+            img = np.expand_dims(img, axis=0)
+            rgb_img_clear.append(img)
 
             sample_cloudy.append(
                 test_data_gen_cloudy.load_by_img_name(res_dict[test_images[idx]]['image'])
             )
 
-            rgb_img_cloudy.append(
-                np.clip(
-                    np.transpose(
-                        sample_cloudy[-1]["image"][1:4, :, :].numpy(), axes=[1, 2, 0]
-                    )
-                    * rgb_std
-                    + rgb_mean,
-                    a_min=0,
-                    a_max=10000,
-                )
-                / 10000
-            )  # # normalize
+            img = sample_cloudy[-1]["image"][:3, :, :].numpy()
+            img = np.transpose(img, axes=[1, 2, 0])
+            img = np.stack([img[:, :, 2], img[:, :, 1], img[:, :, 0]], axis=2)
+            # Rescale to 0-1
+            img = (img - np.min(img)) / (np.max(img) - np.min(img))
+            # Add fake batch dimension
+            img = np.expand_dims(img, axis=0)
+            rgb_img_cloudy.append(img)
 
             sample_cloud_removed.append(
                 test_data_gen_cloud_removed.load_by_img_name(res_dict[test_images[idx]]['image'])
             )
 
-            rgb_img_cloud_removed.append(
-                np.clip(
-                    np.transpose(
-                        sample_cloud_removed[-1]["image"][1:4, :, :].numpy(),
-                        axes=[1, 2, 0],
-                    )
-                    * rgb_std
-                    + rgb_mean,
-                    a_min=0,
-                    a_max=10000,
-                )
-                / 10000
-            )  #  # normalize
+            img = sample_cloud_removed[-1]["image"][:3, :, :].numpy()
+            img = np.transpose(img, axes=[1, 2, 0])
+            img = np.stack([img[:, :, 2], img[:, :, 1], img[:, :, 0]], axis=2)
+            # Rescale to 0-1
+            img = (img - np.min(img)) / (np.max(img) - np.min(img))
+            # Add fake batch dimension
+            img = np.expand_dims(img, axis=0)
+            rgb_img_cloud_removed.append(img)
 
-            pred_cloud_removed_prob.append(torch.from_numpy(res_dict[test_images[idx]]["probs_glf-cr"]))
+            pred_cloud_removed_prob.append(torch.from_numpy(res_dict[test_images[idx]]["probs_cloudremoved"]))
             pred_clear_prob.append(torch.from_numpy(res_dict[test_images[idx]]["probs_cloudfree"]))
 
         print(f"Run and print GradCam Predictions                 ", end="\r")
@@ -656,7 +637,8 @@ def run_grad_cam(
                 np.std(grayscale_cam_pred_cloud_removed_cloud_removed)
             )
 
-            if samples_counter <= num_print:
+            # Skip both false
+            if samples_counter <= num_print and result_type_id != 3:
                 postfix = result_types[result_type_id]
                 plt.imsave(
                     join(
@@ -728,11 +710,11 @@ def run_grad_cam(
     with open(join(save_path, "stat_dict_cloud_removed.pkl"), "wb") as f:
         pkl.dump(statdict_cloud_removed, f)
 
-    plot_violin_plots(
-        save_path=save_path,
-        stat_dict_clear_path=join(save_path, "stat_dict.pkl"),
-        stat_dict_cloudy_path=join(save_path, "stat_dict_cloud_removed.pkl"),
-    )
+    #plot_violin_plots(
+    #    save_path=save_path,
+    #    stat_dict_clear_path=join(save_path, "stat_dict.pkl"),
+    #    stat_dict_cloudy_path=join(save_path, "stat_dict_cloud_removed.pkl"),
+    #)
 
 
 if __name__ == "__main__":

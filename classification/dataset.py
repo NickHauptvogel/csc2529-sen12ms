@@ -271,7 +271,8 @@ class SEN12MS(data.Dataset):
             
             #
             pbar.set_description("[Load]")
-            
+
+            #sample_list = sorted(sample_list)
             for s2_id in sample_list:
                 mini_name = s2_id.split("_")
                 # Append the path of the s2 generated images to the path

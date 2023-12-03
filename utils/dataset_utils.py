@@ -118,14 +118,14 @@ IGBPSimpleClasses = {
     4: "Grasslands",
     5: "Wetlands",
     6: "Croplands",
-    7: "Urban and Built-up",
-    8: "Snow and Ice",
+    7: "Urban",
+    8: "Snow & Ice",
     9: "Barren",
     10: "Water",
     255: "Unclassified"
 }
 
-IGBPSimpleClassList = ["Forest", "Shrub Land", "Savannas", "Grasslands", "Wetlands", "Croplands", "Urban and Built-up", "Snow and Ice", "Barren", "Water"]
+IGBPSimpleClassList = ["Forest", "Shrub Land", "Savannas", "Grasslands", "Wetlands", "Croplands", "Urban", "Snow & Ice", "Barren", "Water"]
 
 IGBPMapping = {
     1: 1,
