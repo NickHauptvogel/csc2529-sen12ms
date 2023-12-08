@@ -8,7 +8,7 @@ from sklearn.metrics import precision_recall_curve, auc, f1_score, \
     precision_score, recall_score, roc_curve
 
 
-def plot_conf_mat(data, title, cloudfree, yticks=True):
+def plot_conf_mat(data, title, cloudfree, yticks=True, fontsize=10):
     # Plot confusion matrix in matplotlib
     fig, ax = plt.subplots(figsize=(5, 5))
     ax.matshow(data)
@@ -17,10 +17,10 @@ def plot_conf_mat(data, title, cloudfree, yticks=True):
             color = 'black'
         else:
             color = 'white'
-        if z >= 0.01:
-            ax.text(j, i, '{:0.2f}'.format(z), ha='center', va='center', color=color)
+        if z >= 0.01 or z <= -0.01:
+            ax.text(j, i, '{:0.2f}'.format(z), ha='center', va='center', color=color, fontsize=fontsize)
         else:
-            ax.text(j, i, '0', ha='center', va='center', color=color)
+            ax.text(j, i, '0', ha='center', va='center', color=color, fontsize=fontsize)
 
     # Get class counts
     classes = [IGBPSimpleClasses[i + 1] for i in range(10)]
@@ -197,7 +197,9 @@ if __name__ == '__main__':
     plot_conf_mat(cloudfree['conf_mat'], 'Confusion matrix for cloud-free data', cloudfree)
     plot_conf_mat(cloudy['conf_mat'], 'Confusion matrix for cloudy data', cloudfree, yticks=False)
     plot_conf_mat(cloudremoved['conf_mat'], 'Confusion matrix for cloud-removed data', cloudfree, yticks=False)
-
+    # Difference between cloudfree and cloudremoved confusion matrices
+    plot_conf_mat(cloudremoved['conf_mat'] - cloudfree['conf_mat'], 'Difference cloud-free and -removed', cloudfree, yticks=True, fontsize=8)
+    1/0
     #############################
     # Plot histogram of cloud cover
     #############################
