@@ -199,7 +199,7 @@ if __name__ == '__main__':
     plot_conf_mat(cloudremoved['conf_mat'], 'Confusion matrix for cloud-removed data', cloudfree, yticks=False)
     # Difference between cloudfree and cloudremoved confusion matrices
     plot_conf_mat(cloudremoved['conf_mat'] - cloudfree['conf_mat'], 'Difference cloud-free and -removed', cloudfree, yticks=True, fontsize=8)
-    1/0
+
     #############################
     # Plot histogram of cloud cover
     #############################
